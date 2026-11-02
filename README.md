@@ -145,6 +145,29 @@ By default, the server binds to `0.0.0.0:3000`, allowing local machines and mobi
 
 ---
 
+## ☁️ Deploying to Render (Cloud Hosting)
+
+The repository includes pre-configured **Render Blueprint** (`render.yaml`), `.node-version`, and `.nvmrc` files configured for seamless one-click cloud deployment.
+
+### Method A: One-Click Blueprint (Recommended)
+1. Go to [Render Dashboard](https://dashboard.render.com/) -> **New +** -> **Blueprint**.
+2. Connect your GitHub repository `https://github.com/rajhegadkar/speedway-isp-dashboard`.
+3. Render reads `render.yaml` and provisions the Web Service automatically with Node.js `22.14.0`.
+
+### Method B: Manual Web Service Setup
+If creating a Web Service manually in Render:
+- **Environment**: `Node`
+- **Region**: Oregon (or nearest)
+- **Branch**: `main`
+- **Build Command**: `npm install --include=dev && npm run build`
+- **Start Command**: `npm run start` (or `npm start`)
+- **Environment Variables**:
+  - `NODE_VERSION`: `22.14.0` (Required for built-in `node:sqlite`)
+  - `NODE_OPTIONS`: `--no-warnings`
+- **Health Check Path**: `/api/dashboard/stats`
+
+---
+
 ## 📁 Project Architecture & File Structure
 
 ```

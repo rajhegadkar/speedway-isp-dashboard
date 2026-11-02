@@ -1,12 +1,24 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useParams, useSearchParams } from 'next/navigation';
 import { Wifi, Printer, ArrowLeft, QrCode, CheckCircle2 } from 'lucide-react';
 import QRCode from 'qrcode';
 import { formatINR, generateUpiPaymentUrl } from '@/lib/billing-engine';
 
 export default function StandaloneInvoicePrintPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-slate-300">
+        <p>Loading invoice...</p>
+      </div>
+    }>
+      <InvoicePrintContent />
+    </Suspense>
+  );
+}
+
+function InvoicePrintContent() {
   const params = useParams();
   const searchParams = useSearchParams();
   const id = params?.id as string;
