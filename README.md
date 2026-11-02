@@ -6,8 +6,20 @@
 [![SQLite](https://img.shields.io/badge/SQLite-ACID_Database-003B57?style=for-the-badge&logo=sqlite)](https://sqlite.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Release](https://img.shields.io/badge/Release-v1.0.0-emerald?style=for-the-badge)](https://github.com/rajhegadkar/speedway-isp-dashboard/releases/tag/v1)
+[![Render](https://img.shields.io/badge/Render-Deploy_Ready-46E3B7?style=for-the-badge&logo=render)](https://speedway-isp-dashboard.onrender.com)
 
 An enterprise-grade, modern ISP operations, billing, and subscriber lifecycle management platform custom-built for **Speedway Broadband Services**. Designed specifically for high-velocity daily internet service provider operations—eliminating forgotten due dates, tracking uncollected arrears across field hubs, generating compliant tax invoices with auto-filled NPCI UPI payment QR codes, dispatching 1-click WhatsApp payment reminders, and delivering 100% financial reconciliation.
+
+---
+
+## ☁️ Deploy to Render (1-Click Setup)
+
+Deploy your own live cloud instance of Speedway Broadband Services on Render in 2 minutes:
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/rajhegadkar/speedway-isp-dashboard)
+
+- **Live Demo Link**: [https://speedway-isp-dashboard.onrender.com](https://speedway-isp-dashboard.onrender.com)
+- **Automatic Configuration**: Includes [`render.yaml`](./render.yaml) Blueprint with Node.js 22 (`node:sqlite` enabled) and auto-binding `$PORT`.
 
 ---
 
