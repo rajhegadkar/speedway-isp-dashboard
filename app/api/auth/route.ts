@@ -31,6 +31,17 @@ export async function POST(request: Request) {
       `).run(auditId, user.full_name || user.username, user.id, now);
     } catch (_) {}
 
+    // Query assigned Payment Groups for this user
+    let assignedPGs: Array<{ id: string; name: string; code: string }> = [];
+    try {
+      assignedPGs = db.prepare(`
+        SELECT id, name, code 
+        FROM payment_groups 
+        WHERE collector_user_id = ? OR (collector_name = ? AND collector_name != 'Unassigned')
+        ORDER BY name ASC
+      `).all(user.id, user.full_name) as Array<{ id: string; name: string; code: string }>;
+    } catch (_) {}
+
     return NextResponse.json({
       success: true,
       user: {
@@ -39,6 +50,8 @@ export async function POST(request: Request) {
         name: user.full_name,
         role: user.role,
         phone: user.phone || '',
+        assignedPGs,
+        defaultPG: assignedPGs[0]?.id || 'ALL',
       }
     });
   } catch (error: any) {

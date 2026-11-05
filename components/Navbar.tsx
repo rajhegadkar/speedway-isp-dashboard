@@ -41,7 +41,7 @@ interface NavbarProps {
   dueTodayCount: number;
   overdueCount: number;
   networkUrl?: string;
-  currentUser?: { id: string; username: string; name: string; role: string } | null;
+  currentUser?: { id: string; username: string; name: string; role: string; assignedPGs?: Array<{ id: string; name: string; code: string }> } | null;
   onLogout?: () => void;
 }
 
@@ -174,11 +174,14 @@ export default function Navbar({
                   className="bg-transparent text-[11px] sm:text-xs font-bold text-slate-700 focus:outline-none cursor-pointer truncate"
                 >
                   <option value="ALL">All PGs</option>
-                  {pgList.map((pg) => (
-                    <option key={pg.id} value={pg.id}>
-                      {pg.name} ({pg.code})
-                    </option>
-                  ))}
+                  {pgList.map((pg) => {
+                    const isAssigned = currentUser?.assignedPGs?.some((p) => p.id === pg.id);
+                    return (
+                      <option key={pg.id} value={pg.id}>
+                        {isAssigned ? `★ ${pg.name} (${pg.code})` : `${pg.name} (${pg.code})`}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

@@ -23,6 +23,7 @@ interface RecordPaymentModalProps {
   preselectedClient?: ClientOption | null;
   clientsList: ClientOption[];
   onPaymentSuccess: (res: any) => void;
+  currentUser?: { id: string; username: string; name: string; role: string } | null;
 }
 
 export default function RecordPaymentModal({
@@ -31,6 +32,7 @@ export default function RecordPaymentModal({
   preselectedClient,
   clientsList,
   onPaymentSuccess,
+  currentUser,
 }: RecordPaymentModalProps) {
   const [selectedClientId, setSelectedClientId] = useState('');
   const [invoiceId, setInvoiceId] = useState('');
@@ -38,7 +40,7 @@ export default function RecordPaymentModal({
   const [paymentDate, setPaymentDate] = useState(getTodayDateString());
   const [paymentMethod, setPaymentMethod] = useState('UPI');
   const [transactionRef, setTransactionRef] = useState('');
-  const [collectedBy, setCollectedBy] = useState('Speedway Admin');
+  const [collectedBy, setCollectedBy] = useState(currentUser?.name || 'Speedway Admin');
   const [remarks, setRemarks] = useState('');
   const [showUpiQr, setShowUpiQr] = useState(false);
   const [upiQrDataUrl, setUpiQrDataUrl] = useState('');
@@ -58,6 +60,12 @@ export default function RecordPaymentModal({
       setAmount(String(clientsList[0].total_outstanding || clientsList[0].monthly_price || ''));
     }
   }, [preselectedClient, clientsList]);
+
+  useEffect(() => {
+    if (isOpen && currentUser?.name) {
+      setCollectedBy(currentUser.name);
+    }
+  }, [isOpen, currentUser]);
 
   useEffect(() => {
     if (selectedClientId && currentClient) {

@@ -32,7 +32,14 @@ import LoginPage from '@/components/LoginPage';
 import { getTimeGreeting, TimeGreetingInfo } from '@/lib/billing-engine';
 
 export default function SpeedwayDashboardPage() {
-  const [currentUser, setCurrentUser] = useState<{ id: string; username: string; name: string; role: string } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    id: string;
+    username: string;
+    name: string;
+    role: string;
+    assignedPGs?: Array<{ id: string; name: string; code: string }>;
+    defaultPG?: string;
+  } | null>(null);
   const [isAuthChecking, setIsAuthChecking] = useState(true);
 
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -67,6 +74,7 @@ export default function SpeedwayDashboardPage() {
   const [reminderType, setReminderType] = useState<any>('DUE_TODAY');
 
   const [isAddPGOpen, setIsAddPGOpen] = useState(false);
+  const [selectedPGToEdit, setSelectedPGToEdit] = useState<any>(null);
   const [networkUrl, setNetworkUrl] = useState('http://192.168.1.128:3000');
   const [timeGreeting, setTimeGreeting] = useState<TimeGreetingInfo>(() => getTimeGreeting());
 
@@ -91,6 +99,15 @@ export default function SpeedwayDashboardPage() {
       setIsAuthChecking(false);
     }
   }, []);
+
+  // 1.1 Auto-default staff to their assigned Payment Group
+  useEffect(() => {
+    if (currentUser?.role === 'staff' && currentUser?.assignedPGs && currentUser.assignedPGs.length > 0) {
+      if (selectedPG === 'ALL') {
+        setSelectedPG(currentUser.assignedPGs[0].id);
+      }
+    }
+  }, [currentUser]);
 
   // 2. Fetch network IP
   useEffect(() => {
@@ -485,7 +502,14 @@ export default function SpeedwayDashboardPage() {
           {/* Payment Groups Tab */}
           {activeTab === 'pgs' && (
             <PGsView
-              onOpenAddPG={() => setIsAddPGOpen(true)}
+              onOpenAddPG={() => {
+                setSelectedPGToEdit(null);
+                setIsAddPGOpen(true);
+              }}
+              onEditPG={(pg) => {
+                setSelectedPGToEdit(pg);
+                setIsAddPGOpen(true);
+              }}
               onFilterDashboard={(pgId) => {
                 setSelectedPG(pgId);
                 setActiveTab('dashboard');
@@ -501,6 +525,7 @@ export default function SpeedwayDashboardPage() {
               }}
               selectedPG={selectedPG}
               onSelectPG={(pgId) => setSelectedPG(pgId)}
+              currentUser={currentUser}
             />
           )}
 
@@ -567,6 +592,7 @@ export default function SpeedwayDashboardPage() {
         preselectedClient={paymentPreselectedClient}
         clientsList={allClientsList}
         onPaymentSuccess={handlePaymentSuccess}
+        currentUser={currentUser}
       />
 
       <AddClientModal
@@ -622,7 +648,11 @@ export default function SpeedwayDashboardPage() {
 
       <PGModal
         isOpen={isAddPGOpen}
-        onClose={() => setIsAddPGOpen(false)}
+        onClose={() => {
+          setIsAddPGOpen(false);
+          setSelectedPGToEdit(null);
+        }}
+        pgToEdit={selectedPGToEdit}
         onSuccess={() => {
           fetchPGs();
           fetchDashboardStats();

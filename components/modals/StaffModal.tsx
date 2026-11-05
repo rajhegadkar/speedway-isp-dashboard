@@ -303,6 +303,30 @@ export default function StaffModal({
                     </select>
                   </div>
                 )}
+
+                {mode === 'edit' && (
+                  <div className="col-span-2 pt-2 border-t border-slate-100">
+                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
+                      Assigned Payment Groups ({staffToEdit?.assignedCount || 0})
+                    </label>
+                    {staffToEdit?.assignedPGs && staffToEdit.assignedPGs.length > 0 ? (
+                      <div className="flex flex-wrap gap-1.5 p-2.5 bg-sky-50/70 border border-sky-100 rounded-xl">
+                        {staffToEdit.assignedPGs.map((pg: any) => (
+                          <span
+                            key={pg.id}
+                            className="px-2.5 py-1 bg-white text-sky-900 border border-sky-200 rounded-lg text-xs font-semibold shadow-2xs"
+                          >
+                            🏢 {pg.name} ({pg.code})
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-500 italic">
+                        Not currently assigned to any Payment Group. You can link this collector when creating or editing a Payment Group.
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </>
           )}

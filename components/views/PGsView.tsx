@@ -15,24 +15,29 @@ import {
   BarChart2,
   LayoutDashboard,
   Eye,
-  Trash2
+  Trash2,
+  Edit3
 } from 'lucide-react';
 import { formatINR } from '@/lib/billing-engine';
 
 interface PGsViewProps {
   onOpenAddPG: () => void;
+  onEditPG?: (pg: any) => void;
   onFilterDashboard: (pgId: string) => void;
   onViewClients: (pgId: string) => void;
   selectedPG?: string;
   onSelectPG?: (pgId: string) => void;
+  currentUser?: { id: string; username: string; name: string; role: string } | null;
 }
 
 export default function PGsView({
   onOpenAddPG,
+  onEditPG,
   onFilterDashboard,
   onViewClients,
   selectedPG = 'ALL',
   onSelectPG,
+  currentUser,
 }: PGsViewProps) {
   const [pgs, setPgs] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -251,6 +256,17 @@ export default function PGsView({
               <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-[11px] font-mono text-slate-400">ID: {pg.id}</span>
                 <div className="flex items-center gap-2">
+                  {(!currentUser || currentUser.role === 'admin') && onEditPG && (
+                    <button
+                      onClick={() => onEditPG(pg)}
+                      className="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-xl flex items-center gap-1 transition-colors"
+                      title="Edit Payment Group & Reassign Collector"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Edit Hub</span>
+                    </button>
+                  )}
+
                   <button
                     onClick={() => onFilterDashboard(pg.id)}
                     className={`px-3 py-1.5 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-all ${
