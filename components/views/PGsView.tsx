@@ -190,11 +190,14 @@ export default function PGsView({
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Collector</span>
                     <strong className="text-slate-800">{pg.collector_name}</strong>
+                    {pg.collector_username && (
+                      <span className="text-[10px] text-sky-600 font-mono block">@{pg.collector_username}</span>
+                    )}
                   </div>
                   <div className="text-right">
                     <span className="text-slate-400 block text-[10px] uppercase font-bold">Contact</span>
                     <a href={`tel:${pg.collector_phone}`} className="text-sky-600 font-mono font-bold hover:underline">
-                      {pg.collector_phone}
+                      {pg.collector_phone || 'None'}
                     </a>
                   </div>
                 </div>

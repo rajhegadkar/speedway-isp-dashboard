@@ -21,10 +21,15 @@ import {
   Phone,
   Mail,
   MapPin,
-  QrCode
+  QrCode,
+  Users,
+  UserPlus,
+  KeyRound
 } from 'lucide-react';
 import { formatINR } from '@/lib/billing-engine';
 import PlanModal from '@/components/modals/PlanModal';
+import PGModal from '@/components/modals/PGModal';
+import StaffModal from '@/components/modals/StaffModal';
 
 interface CustomizeViewProps {
   onOpenAddPG: () => void;
@@ -34,7 +39,7 @@ interface CustomizeViewProps {
 
 export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, currentUser }: CustomizeViewProps) {
   const isAdmin = currentUser?.role === 'admin';
-  const [activeSubTab, setActiveSubTab] = useState<'plans' | 'pgs' | 'business' | 'policies'>('plans');
+  const [activeSubTab, setActiveSubTab] = useState<'plans' | 'pgs' | 'staff' | 'business' | 'policies'>('plans');
 
   // Plans data
   const [plans, setPlans] = useState<any[]>([]);
@@ -43,6 +48,14 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
 
   // PGs data
   const [pgs, setPgs] = useState<any[]>([]);
+  const [isPGModalOpen, setIsPGModalOpen] = useState(false);
+  const [selectedPGToEdit, setSelectedPGToEdit] = useState<any | null>(null);
+
+  // Staff Team data
+  const [staffList, setStaffList] = useState<any[]>([]);
+  const [isStaffModalOpen, setIsStaffModalOpen] = useState(false);
+  const [staffModalMode, setStaffModalMode] = useState<'create' | 'edit' | 'reset_password'>('create');
+  const [selectedStaffToEdit, setSelectedStaffToEdit] = useState<any | null>(null);
 
   // System Settings state
   const [settings, setSettings] = useState<Record<string, string>>({});
@@ -55,6 +68,7 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
   useEffect(() => {
     fetchPlans();
     fetchPGs();
+    fetchStaff();
     fetchSettings();
   }, []);
 
@@ -122,6 +136,62 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
     } catch (err: any) {
       alert(err.message);
     }
+  };
+
+  const fetchStaff = async () => {
+    try {
+      const res = await fetch('/api/users');
+      const json = await res.json();
+      if (json.success) {
+        setStaffList(json.users || []);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleOpenAddStaff = () => {
+    setSelectedStaffToEdit(null);
+    setStaffModalMode('create');
+    setIsStaffModalOpen(true);
+  };
+
+  const handleOpenEditStaff = (staff: any) => {
+    setSelectedStaffToEdit(staff);
+    setStaffModalMode('edit');
+    setIsStaffModalOpen(true);
+  };
+
+  const handleOpenResetPassword = (staff: any) => {
+    setSelectedStaffToEdit(staff);
+    setStaffModalMode('reset_password');
+    setIsStaffModalOpen(true);
+  };
+
+  const handleDeleteStaff = async (staff: any) => {
+    if (!confirm(`Are you sure you want to delete staff account "${staff.full_name}" (@${staff.username})?`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/users?id=${staff.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (json.success) {
+        alert(json.message);
+        fetchStaff();
+        fetchPGs();
+        if (onRefreshGlobalData) onRefreshGlobalData();
+      } else {
+        alert(json.error || 'Failed to delete staff account');
+      }
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleOpenEditPG = (pg: any) => {
+    setSelectedPGToEdit(pg);
+    setIsPGModalOpen(true);
   };
 
   const handleDeletePG = async (pg: any) => {
@@ -209,6 +279,15 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
             <span>Add Payment Group</span>
           </button>
         )}
+        {isAdmin && activeSubTab === 'staff' && (
+          <button
+            onClick={handleOpenAddStaff}
+            className="px-4 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold rounded-xl shadow-md shadow-sky-600/20 transition-all flex items-center gap-1.5 self-start sm:self-auto"
+          >
+            <UserPlus className="w-4 h-4" />
+            <span>Add Staff Account</span>
+          </button>
+        )}
         {!isAdmin && (
           <span className="px-3 py-1.5 rounded-xl bg-slate-100 text-slate-600 text-xs font-semibold self-start sm:self-auto flex items-center gap-1.5 border border-slate-200">
             <ShieldCheck className="w-4 h-4 text-sky-600" />
@@ -241,6 +320,18 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
         >
           <Building2 className="w-4 h-4" />
           <span>Payment Groups ({pgs.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSubTab('staff')}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all whitespace-nowrap ${
+            activeSubTab === 'staff'
+              ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20'
+              : 'bg-white text-slate-600 hover:text-slate-900 border border-slate-200'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          <span>Staff Team & Collectors ({staffList.length})</span>
         </button>
 
         <button
@@ -415,13 +506,16 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
 
                   <div className="bg-slate-50 p-3 rounded-xl border border-slate-200/80 mb-3 text-xs flex items-center justify-between">
                     <div>
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Collector Name</span>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Assigned Field Collector</span>
                       <strong className="text-slate-800">{pg.collector_name}</strong>
+                      {pg.collector_username && (
+                        <span className="text-[10px] text-sky-600 font-mono block">@{pg.collector_username}</span>
+                      )}
                     </div>
                     <div className="text-right">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Contact Phone</span>
                       <a href={`tel:${pg.collector_phone}`} className="text-sky-600 font-mono font-bold hover:underline">
-                        {pg.collector_phone}
+                        {pg.collector_phone || 'None'}
                       </a>
                     </div>
                   </div>
@@ -440,16 +534,187 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
 
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
                   <span className="text-[11px] text-slate-400">ID: {pg.id}</span>
-                  <button
-                    onClick={() => handleDeletePG(pg)}
-                    className="text-xs text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                    <span>Delete Hub</span>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleOpenEditPG(pg)}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg flex items-center gap-1 transition-colors"
+                      >
+                        <Edit3 className="w-3.5 h-3.5" />
+                        <span>Edit Hub</span>
+                      </button>
+                    )}
+                    {isAdmin && (
+                      <button
+                        onClick={() => handleDeletePG(pg)}
+                        className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete Hub"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* SUB-TAB: STAFF TEAM & COLLECTORS */}
+      {activeSubTab === 'staff' && (
+        <div className="space-y-4">
+          {/* Summary Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-sky-100 text-sky-700 flex items-center justify-center font-bold">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Total Staff Accounts</span>
+                <p className="text-lg font-black text-slate-900">{staffList.length}</p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                <ShieldCheck className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Active Field Collectors</span>
+                <p className="text-lg font-black text-emerald-700">
+                  {staffList.filter((s) => s.role === 'staff' && s.is_active).length}
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold">
+                <Building2 className="w-5 h-5" />
+              </div>
+              <div>
+                <span className="text-xs text-slate-500 font-medium">Assigned Payment Groups</span>
+                <p className="text-lg font-black text-indigo-700">
+                  {pgs.filter((p) => p.collector_user_id).length} of {pgs.length}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Staff Accounts Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {staffList.map((staff) => {
+              const isUserAdmin = staff.role === 'admin';
+              const initial = staff.full_name?.charAt(0)?.toUpperCase() || 'U';
+
+              return (
+                <div
+                  key={staff.id}
+                  className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Header: Avatar, Name, Role */}
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-11 h-11 rounded-xl flex items-center justify-center font-black text-base text-white shadow-sm ${
+                            isUserAdmin
+                              ? 'bg-gradient-to-br from-indigo-500 to-sky-600'
+                              : 'bg-gradient-to-br from-sky-500 to-blue-600'
+                          }`}
+                        >
+                          {initial}
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-sm text-slate-900">{staff.full_name}</h4>
+                          <span className="text-xs font-mono text-sky-600 font-bold">@{staff.username}</span>
+                        </div>
+                      </div>
+
+                      <span
+                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          isUserAdmin
+                            ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
+                            : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        }`}
+                      >
+                        {isUserAdmin ? 'Admin' : 'Collector'}
+                      </span>
+                    </div>
+
+                    {/* Contact & Status */}
+                    <div className="space-y-1.5 text-xs text-slate-600 mb-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Mobile Phone:</span>
+                        <span className="font-mono font-semibold text-slate-800">
+                          {staff.phone || 'None set'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400">Login Status:</span>
+                        <span className={`font-bold ${staff.is_active ? 'text-emerald-600' : 'text-slate-400'}`}>
+                          {staff.is_active ? 'Active' : 'Disabled'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Assigned Payment Groups */}
+                    <div className="mb-3">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                        Assigned Payment Groups ({staff.assignedCount || 0})
+                      </span>
+                      {staff.assignedPGs && staff.assignedPGs.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {staff.assignedPGs.map((p: any) => (
+                            <span
+                              key={p.id}
+                              className="px-2 py-0.5 bg-sky-50 text-sky-800 border border-sky-100 rounded-md text-[11px] font-semibold"
+                            >
+                              {p.name}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-slate-400 italic">No branch assigned yet</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Actions (Admin Only) */}
+                  <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                    <span className="text-[10px] font-mono text-slate-400">{staff.id}</span>
+                    {isAdmin && (
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => handleOpenResetPassword(staff)}
+                          title="Reset Password"
+                          className="px-2 py-1 text-[11px] font-bold text-amber-700 hover:text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-lg transition-colors flex items-center gap-1"
+                        >
+                          <KeyRound className="w-3 h-3" />
+                          <span>Password</span>
+                        </button>
+                        <button
+                          onClick={() => handleOpenEditStaff(staff)}
+                          title="Edit Details"
+                          className="p-1 text-slate-500 hover:text-sky-600 hover:bg-slate-100 rounded-lg transition-colors"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                        </button>
+                        {staff.username !== 'admin' && (
+                          <button
+                            onClick={() => handleDeleteStaff(staff)}
+                            title="Delete Account"
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -736,6 +1001,37 @@ export default function CustomizeView({ onOpenAddPG, onRefreshGlobalData, curren
           if (onRefreshGlobalData) onRefreshGlobalData();
         }}
         planToEdit={selectedPlanToEdit}
+      />
+
+      {/* Staff Modal (Add / Edit / Password Reset) */}
+      <StaffModal
+        isOpen={isStaffModalOpen}
+        onClose={() => {
+          setIsStaffModalOpen(false);
+          setSelectedStaffToEdit(null);
+        }}
+        onSuccess={() => {
+          fetchStaff();
+          fetchPGs();
+          if (onRefreshGlobalData) onRefreshGlobalData();
+        }}
+        staffToEdit={selectedStaffToEdit}
+        mode={staffModalMode}
+      />
+
+      {/* Payment Group Modal (Edit Hub) */}
+      <PGModal
+        isOpen={isPGModalOpen}
+        onClose={() => {
+          setIsPGModalOpen(false);
+          setSelectedPGToEdit(null);
+        }}
+        onSuccess={() => {
+          fetchPGs();
+          fetchStaff();
+          if (onRefreshGlobalData) onRefreshGlobalData();
+        }}
+        pgToEdit={selectedPGToEdit}
       />
     </div>
   );

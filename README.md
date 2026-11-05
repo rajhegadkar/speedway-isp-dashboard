@@ -37,14 +37,16 @@ Deploy your own live cloud instance of Speedway Broadband Services on Render in 
   - 🟣 **Suspended Lines** (Blocked optical links)
   - 💰 **Total Monthly Invoiced, Realized Collections, and Pending Arrears**
 
-### 🔐 2. Role-Based Access Control (RBAC) & Secure Login
+### 🔐 2. Role-Based Access Control (RBAC) & Staff Account Management
 - Built-in session security with operator identity tracking across all administrative and collection operations.
-- **Admin Role**: Full system configuration, plan creation/editing/deletion, payment group branch setup, company branding adjustments, and database re-seeding.
+- **Admin Role**: Full system configuration, plan creation/editing/deletion, staff user management, payment group branch setup, company branding adjustments, and database backups.
 - **Staff / Collector Role**: Dedicated collection view, spot receipt creation, subscriber status inspection, and WhatsApp reminder dispatching with security guards on destructive settings.
+- **Dedicated Staff Accounts**: Admins can create and manage login accounts for field staff (Username, Password, Name, Phone), reset passwords, and assign them directly to field collection hubs.
 - **One-Click Quick Sign-In**: Embedded developer/demo login shortcuts for immediate evaluation.
 
-### 🏢 3. Multi-Branch Payment Groups (PGs) Management
+### 🏢 3. Multi-Branch Payment Groups (PGs) & Linked Staff Collectors
 - Segment operations across independent collection points, residential societies, commercial plazas, and field collectors.
+- **Authorized Staff Assignment**: Link Payment Groups directly to registered Staff Accounts rather than plain text names. Staff members can sign in to inspect their assigned subscribers and collect dues.
 - Real-time hub metrics: Total Subscribers, Active Lines, Total Monthly Billed, Realized Cash Collection, Pending Arrears, and Collection Efficiency Percentage (`%`).
 - One-click global PG filter allows isolating the entire dashboard, client directory, and billing reports by any selected branch hub.
 

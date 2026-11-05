@@ -12,7 +12,7 @@ export async function POST(request: Request) {
 
     const db = getDb();
     const user = db.prepare(`
-      SELECT id, username, full_name, role 
+      SELECT id, username, full_name, role, phone 
       FROM users 
       WHERE LOWER(username) = LOWER(?) AND password = ?
     `).get(username?.trim(), password?.trim()) as any;
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
         username: user.username,
         name: user.full_name,
         role: user.role,
+        phone: user.phone || '',
       }
     });
   } catch (error: any) {

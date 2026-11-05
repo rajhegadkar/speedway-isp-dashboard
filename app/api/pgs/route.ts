@@ -12,7 +12,12 @@ export async function GET() {
     const today = getTodayDateString();
     const currentYearMonth = today.substring(0, 7);
 
-    const pgs = db.prepare(`SELECT * FROM payment_groups ORDER BY name ASC`).all() as any[];
+    const pgs = db.prepare(`
+      SELECT pg.*, u.username as collector_username
+      FROM payment_groups pg
+      LEFT JOIN users u ON pg.collector_user_id = u.id
+      ORDER BY pg.name ASC
+    `).all() as any[];
 
     const enrichedPGs = pgs.map((pg) => {
       // Client counts
@@ -98,8 +103,8 @@ export async function POST(request: Request) {
     const code = body.code?.trim() || `PG-${body.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 4)}-${nextNum}`;
 
     db.prepare(`
-      INSERT INTO payment_groups (id, name, code, area_location, collector_name, collector_phone, is_active, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, 1, ?)
+      INSERT INTO payment_groups (id, name, code, area_location, collector_name, collector_phone, collector_user_id, is_active, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
     `).run(
       pgId,
       body.name.trim(),
@@ -107,6 +112,7 @@ export async function POST(request: Request) {
       body.area_location.trim(),
       body.collector_name?.trim() || 'Unassigned',
       body.collector_phone?.trim() || '',
+      body.collector_user_id?.trim() || null,
       now
     );
 
@@ -141,7 +147,7 @@ export async function PUT(request: Request) {
 
     db.prepare(`
       UPDATE payment_groups 
-      SET name = ?, code = ?, area_location = ?, collector_name = ?, collector_phone = ?, is_active = ?
+      SET name = ?, code = ?, area_location = ?, collector_name = ?, collector_phone = ?, collector_user_id = ?, is_active = ?
       WHERE id = ?
     `).run(
       body.name.trim(),
@@ -149,6 +155,7 @@ export async function PUT(request: Request) {
       body.area_location.trim(),
       body.collector_name?.trim() || 'Unassigned',
       body.collector_phone?.trim() || '',
+      body.collector_user_id !== undefined ? (body.collector_user_id?.trim() || null) : null,
       body.is_active !== undefined ? (body.is_active ? 1 : 0) : 1,
       body.id
     );

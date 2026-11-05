@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getDb } from '@/lib/db';
+import { getDb, reseedDatabase } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -44,25 +44,11 @@ export async function POST(request: Request) {
     const db = getDb();
 
     if (action === 'reset_demo') {
-      db.exec(`
-        DELETE FROM payments;
-        DELETE FROM invoices;
-        DELETE FROM customers;
-        DELETE FROM internet_plans;
-        DELETE FROM payment_groups;
-        DELETE FROM expenses;
-        DELETE FROM audit_logs;
-        DELETE FROM users;
-      `);
-
-      // Trigger re-seed
-      const now = new Date().toISOString();
-      db.prepare(`
-        INSERT INTO audit_logs (id, user_name, action, entity_type, entity_id, details, created_at)
-        VALUES (?, 'Speedway Admin', 'DATABASE_RESET', 'DATABASE', 'MAIN', 'Database reset to clean state.', ?)
-      `).run(`AUD-${Date.now()}`, now);
-
-      return NextResponse.json({ success: true, message: 'Database reset successfully' });
+      reseedDatabase(db);
+      return NextResponse.json({ 
+        success: true, 
+        message: 'Database re-seeded successfully with default demonstration data and staff accounts' 
+      });
     }
 
     return NextResponse.json({ success: false, error: 'Unsupported backup action' }, { status: 400 });

@@ -19,6 +19,7 @@ export function getDb(): DatabaseSync {
     dbInstance.exec('PRAGMA foreign_keys = ON;');
     initSchema(dbInstance);
   }
+  ensureDefaultUsers(dbInstance);
   return dbInstance;
 }
 
@@ -29,7 +30,9 @@ function initSchema(db: DatabaseSync) {
       username TEXT UNIQUE NOT NULL,
       password TEXT NOT NULL,
       full_name TEXT NOT NULL,
-      role TEXT NOT NULL DEFAULT 'admin', -- 'admin', 'staff'
+      role TEXT NOT NULL DEFAULT 'staff', -- 'admin', 'staff'
+      phone TEXT,
+      is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
 
@@ -40,6 +43,7 @@ function initSchema(db: DatabaseSync) {
       area_location TEXT NOT NULL,
       collector_name TEXT NOT NULL,
       collector_phone TEXT NOT NULL,
+      collector_user_id TEXT,
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL
     );
@@ -174,11 +178,78 @@ function initSchema(db: DatabaseSync) {
     // Column already exists
   }
 
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN phone TEXT;');
+  } catch (_) {}
+
+  try {
+    db.exec('ALTER TABLE users ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;');
+  } catch (_) {}
+
+  try {
+    db.exec('ALTER TABLE payment_groups ADD COLUMN collector_user_id TEXT;');
+  } catch (_) {}
+
   // Seed default settings if empty
   seedDefaultSettings(db);
 
   // Seed default data if empty
   seedInitialData(db);
+}
+
+export function seedDefaultUsers(db: DatabaseSync) {
+  const now = new Date().toISOString();
+  const defaultUsers = [
+    ['USR-001', 'admin', 'admin123', 'Speedway Admin', 'admin', '+91 98765 43210', 1],
+    ['USR-002', 'staff1', 'staff123', 'Rajesh Verma', 'staff', '+91 98765 43210', 1],
+    ['USR-003', 'amit', 'amit123', 'Amit Kumar', 'staff', '+91 98111 22334', 1],
+    ['USR-004', 'sunita', 'sunita123', 'Sunita Sharma', 'staff', '+91 98222 33445', 1],
+    ['USR-005', 'vikram', 'vikram123', 'Vikram Singh', 'staff', '+91 98333 44556', 1],
+  ];
+
+  for (const [id, username, password, full_name, role, phone, is_active] of defaultUsers) {
+    try {
+      db.prepare(`
+        INSERT OR IGNORE INTO users (id, username, password, full_name, role, phone, is_active, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(id, username, password, full_name, role, phone, is_active, now);
+    } catch (_) {}
+  }
+}
+
+export function ensureDefaultUsers(db: DatabaseSync) {
+  try {
+    const userCheck = db.prepare('SELECT count(*) as count FROM users').get() as { count: number };
+    if (!userCheck || userCheck.count === 0) {
+      seedDefaultUsers(db);
+    }
+  } catch (e) {
+    console.error('Error ensuring default users:', e);
+  }
+}
+
+export function reseedDatabase(db: DatabaseSync) {
+  db.exec(`
+    DELETE FROM payments;
+    DELETE FROM invoices;
+    DELETE FROM customers;
+    DELETE FROM internet_plans;
+    DELETE FROM payment_groups;
+    DELETE FROM expenses;
+    DELETE FROM audit_logs;
+    DELETE FROM users;
+  `);
+
+  seedDefaultSettings(db);
+  seedInitialData(db, true);
+
+  const now = new Date().toISOString();
+  try {
+    db.prepare(`
+      INSERT INTO audit_logs (id, user_name, action, entity_type, entity_id, details, created_at)
+      VALUES (?, 'Speedway Admin', 'DATABASE_RESET', 'DATABASE', 'MAIN', 'Database re-seeded with demonstration accounts and records.', ?)
+    `).run(`AUD-${Date.now()}`, now);
+  } catch (_) {}
 }
 
 export function getSystemSettings(db?: DatabaseSync): Record<string, string> {
@@ -231,30 +302,27 @@ function seedDefaultSettings(db: DatabaseSync) {
   }
 }
 
-function seedInitialData(db: DatabaseSync) {
-  const userCheck = db.prepare('SELECT count(*) as count FROM users').get() as { count: number };
-  if (userCheck.count > 0) {
-    return;
+function seedInitialData(db: DatabaseSync, force = false) {
+  if (!force) {
+    const userCheck = db.prepare('SELECT count(*) as count FROM users').get() as { count: number };
+    if (userCheck && userCheck.count > 0) {
+      return;
+    }
   }
 
   const now = new Date().toISOString();
 
-  // 1. Default Admin & Staff
-  db.prepare(`
-    INSERT INTO users (id, username, password, full_name, role, created_at)
-    VALUES 
-      ('USR-001', 'admin', 'admin123', 'Speedway Admin', 'admin', ?),
-      ('USR-002', 'staff1', 'staff123', 'Rajesh Collector', 'staff', ?)
-  `).run(now, now);
+  // 1. Default Admin & Staff Accounts
+  seedDefaultUsers(db);
 
-  // 2. Default Payment Groups (PGs)
+  // 2. Default Payment Groups (PGs) with linked staff collectors
   db.prepare(`
-    INSERT INTO payment_groups (id, name, code, area_location, collector_name, collector_phone, is_active, created_at)
+    INSERT INTO payment_groups (id, name, code, area_location, collector_name, collector_phone, collector_user_id, is_active, created_at)
     VALUES
-      ('PG-001', 'Sector 4 Main Hub', 'PG-SEC4', 'Sector 4, Central Area', 'Rajesh Verma', '+91 98765 43210', 1, ?),
-      ('PG-002', 'North Enclave Collection', 'PG-NORT', 'North Enclave & Phase 2', 'Amit Kumar', '+91 98111 22334', 1, ?),
-      ('PG-003', 'Market Complex Hub', 'PG-MKT', 'Central Commercial Plaza', 'Sunita Sharma', '+91 98222 33445', 1, ?),
-      ('PG-004', 'Green Valley Residency', 'PG-GVR', 'Green Valley Towers A-G', 'Vikram Singh', '+91 98333 44556', 1, ?)
+      ('PG-001', 'Sector 4 Main Hub', 'PG-SEC4', 'Sector 4, Central Area', 'Rajesh Verma', '+91 98765 43210', 'USR-002', 1, ?),
+      ('PG-002', 'North Enclave Collection', 'PG-NORT', 'North Enclave & Phase 2', 'Amit Kumar', '+91 98111 22334', 'USR-003', 1, ?),
+      ('PG-003', 'Market Complex Hub', 'PG-MKT', 'Central Commercial Plaza', 'Sunita Sharma', '+91 98222 33445', 'USR-004', 1, ?),
+      ('PG-004', 'Green Valley Residency', 'PG-GVR', 'Green Valley Towers A-G', 'Vikram Singh', '+91 98333 44556', 'USR-005', 1, ?)
   `).run(now, now, now, now);
 
   // 3. Internet Plans
